@@ -1,0 +1,54 @@
+function createBulkPDFs() {
+  const docFile = DriveApp.getFileById("1zGTNkzUr_ApaYSpqdu_PKcEuDrVm9r9kA_oyqfIRWeI");
+  const TempFolder = DriveApp.getFolderById("1h8RHp890f0HGsc-dulwEP9Urrpnq7xcw");
+  const pdfFolder = DriveApp.getFolderById("1boy1E2Ih3Cp3zMTak8nAUtmtc7e34Y1L");
+  const currentSheet  = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("WorkOrders");
+  const data = currentSheet.getRange(2,1,currentSheet.getLastRow()-1,11).getDisplayValues();
+  /// add comment box, auto reply
+  /// add TicketID to email 
+  data.forEach((row, i) => {
+    var printed = SpreadsheetApp.getActiveSheet().getRange(i + 2, 11).getDisplayValue();
+    console.log(printed)
+    if (printed == "") {
+      SpreadsheetApp.getActiveSheet().getRange(i + 2, 10).setValue(getRndInteger(1000,50000));
+      var ticketID = SpreadsheetApp.getActiveSheet().getRange(i + 2, 10).getDisplayValue();
+      console.log(ticketID)
+  }})
+  data.forEach((row, i) => {
+    var printed = SpreadsheetApp.getActiveSheet().getRange(i + 2, 11).getDisplayValue();
+    if (printed == "") {
+      SpreadsheetApp.getActiveSheet().getRange(i + 2, 11).setValue(1); 
+      var ticketID = SpreadsheetApp.getActiveSheet().getRange(i + 2, 10).getDisplayValue();
+      createPDF(row[2], row[3], row[0], row[4], row[1], row[5],row[8], row[6], ticketID, ticketID, docFile, TempFolder, pdfFolder);
+      console.log(ticketID)
+      var requestoremail = SpreadsheetApp.getActiveSheet().getRange(i + 2, 2).getDisplayValue();
+      var file = pdfFolder.getFilesByName(ticketID)
+      if (file.hasNext()){
+        MailApp.sendEmail("lboone@washconc.org","New Work Order", "Please find the Work Order PDF attached to this email. \n\n This is an automated message, please do not respond.",   {cc: "mmoscato@washconc.org, managementfellow@washconc.org", attachments: [file.next().getAs(MimeType.PDF)]});}
+      
+  }})
+  }
+function createPDF(name, dept, date_rec, phone, email, rtype, needed, add_info, pdfName, ticketnum, docFile, TempFolder, pdfFolder) {
+  // Template ID 1zGTNkzUr_ApaYSpqdu_PKcEuDrVm9r9kA_oyqfIRWeI
+  // Folder ID 1h8RHp890f0HGsc-dulwEP9Urrpnq7xcw
+  //pdf folder  1boy1E2Ih3Cp3zMTak8nAUtmtc7e34Y1L
+  const tempFile = docFile.makeCopy(TempFolder);
+  const TempDocFile = DocumentApp.openById(tempFile.getId());
+  const body = TempDocFile.getBody();
+  body.replaceText("{name}", name);
+  body.replaceText("{dept}", dept);
+  body.replaceText("{date_rec}", date_rec);
+  body.replaceText("{phone}", phone);
+  body.replaceText("{email}", email);
+  body.replaceText("{rtype}", rtype);
+  body.replaceText("{needed}", needed);
+  body.replaceText("{add_info}", add_info);
+  body.replaceText("{ticketnum}", ticketnum);
+  TempDocFile.saveAndClose();
+  const pfdContentBlob = tempFile.getAs(MimeType.PDF);
+  pdfFolder.createFile(pfdContentBlob).setName(pdfName);
+  TempFolder.removeFile(tempFile);
+}
+function getRndInteger(min, max) {
+  return Math.floor(Math.random() * (max - min) ) + min;
+}
